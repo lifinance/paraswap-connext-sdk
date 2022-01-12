@@ -10,6 +10,30 @@ or
 npm install --save @lifinance/paraswap-connext-sdk
 ```
 
+
+## Usage
+
+First you request a rate (`getRates`) for the assets you want to transfer and swap.
+The returned route can then be executed automatically using `executeRoute`.
+```ts
+import SDK from '@lifinance/paraswap-connext-sdk'
+
+const sdk = SDK
+const srcToken = await sdk.getBalance(await wallet.getAddress(), 'USDC', 137)
+const destToken = await sdk.getBalance(await wallet.getAddress(), 'USDT', 100)
+
+const rates = await sdk.getRates(
+    srcToken.address,
+    srcToken.chainId,
+    destToken.address,
+    destToken.chainId,
+    '1000000',
+    userAddress,
+  )
+
+await sdk.executeRoute(wallet, rates.routes[0])
+```
+
 ## Summary
 
 This package allow to access to do bridge and swap calls via ParaSwap and Connext. LiFi API is used under the hood to  find the best cross-chain route. The route can then executed via the SDK.
