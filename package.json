@@ -47,7 +47,7 @@
     "url": "https://github.com/lifinance/paraswap-connext-sdk/issues"
   },
   "dependencies": {
-    "@lifinance/sdk": "^0.3.4"
+    "@lifinance/sdk": "^0.4.1"
   },
   "devDependencies": {
     "@commitlint/cli": "^13.1.0",
