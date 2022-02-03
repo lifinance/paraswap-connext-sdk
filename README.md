@@ -10,6 +10,22 @@ or
 npm install --save @lifinance/paraswap-connext-sdk
 ```
 
+## Supported Chains and Tokens
+
+Transfers between all combinations of chains supported by Connext are possible. In addition on chains which are supported by ParaSwap most tokens can be used because we automatically swap them for you.
+
+| Chain     | Chain Id | Chain Key | Tokens when sending chain    | Tokens when receiving chain |
+|-----------|----------|-----------|------------------------------|-----------------------------|
+| Ethereum  | 1        | ETH       | ✅ access to most tokens     | ✅ access to most tokens     |
+| Optimism  | 10       | OPT       | ETH, USDC, USDT, DAI, WBTC   | ETH, USDC, USDT, DAI, WBTC  |
+| Binance   | 56       | BSC       | ✅ access to most tokens     | ✅ access to most tokens     |
+| Gnosis    | 100      | DAI       | ETH, USDC, USDT, DAI, WBTC   | ETH, USDC, USDT, DAI, WBTC  |
+| Polygon   | 137      | POL       | ✅ access to most tokens     | ✅ access to most tokens     |
+| Fantom    | 250      | FTM       | ETH, USDC, USDT, DAI, WBTC   | ETH, USDC, USDT, DAI, WBTC  |
+| Moonriver | 1285     | MOR       | USDC, USDT                   | USDC, USDT                  |
+| Arbitrum  | 42161    | ARB       | ETH, USDC, USDT, DAI, WBTC   | ETH, USDC, USDT, DAI, WBTC  |
+| Avalanche | 43114    | AVA       | ✅ access to most tokens     | ✅ access to most tokens     |
+
 
 ## Usage
 
@@ -30,7 +46,7 @@ const quote = await sdk.getQuote(
   'USDT',
   'DAI',
   '1000000',
-  userAddress
+  await wallet.getAddress()
 )
 
 // start transfer

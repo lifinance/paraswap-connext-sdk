@@ -1,5 +1,5 @@
 import { providers, Wallet } from 'ethers'
-import { ParaswapConnextSdk, StatusResponse } from '../src'
+import { ParaswapConnextSDK, StatusResponse } from '../src'
 
 const demo = async () => {
   // setup wallet
@@ -17,7 +17,7 @@ const demo = async () => {
   console.log('>> Wallet is set up')
 
   // setup quote
-  const sdk = new ParaswapConnextSdk()
+  const sdk = new ParaswapConnextSDK()
 
   // get quote
   console.log('... Requesting quote')
