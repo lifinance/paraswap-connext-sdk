@@ -2,5 +2,4 @@
 export * from './types'
 
 // expose sdk
-import SDK from './sdk'
-export default SDK
+export * from './sdk'

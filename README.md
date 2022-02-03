@@ -13,25 +13,43 @@ npm install --save @lifinance/paraswap-connext-sdk
 
 ## Usage
 
-First you request a rate (`getRates`) for the assets you want to transfer and swap.
-The returned route can then be executed automatically using `executeRoute`.
-```ts
-import SDK from '@lifinance/paraswap-connext-sdk'
+First you request a quote (`getQuote`) for the assets you want to transfer and swap.
+The returned quote contains a `transactionRequest` which can be passed to your wallet to start the transfer.
+Afterwards you want to use the `getStatus` function to check if the transfer has been been completed on the destination chain.
 
-const sdk = SDK
-const srcToken = await sdk.getBalance(await wallet.getAddress(), 'USDC', 137)
-const destToken = await sdk.getBalance(await wallet.getAddress(), 'USDT', 100)
+```js
+import { providers, Wallet } from 'ethers'
+import { ParaswapConnextSdk } from '../src'
 
-const rates = await sdk.getRates(
-    srcToken.address,
-    srcToken.chainId,
-    destToken.address,
-    destToken.chainId,
-    '1000000',
-    userAddress,
-  )
+const sdk = new ParaswapConnextSdk()
 
-await sdk.executeRoute(wallet, rates.routes[0])
+// get quote
+const quote = await sdk.getQuote(
+  'USDC',
+  'POL',
+  'USDT',
+  'DAI',
+  '1000000',
+  userAddress
+)
+
+// start transfer
+const sendTx = await wallet.sendTransaction(quote.transactionRequest)
+await sendTx.wait()
+
+// check status
+console.log('>> Check status')
+let result
+do {
+  result = await sdk.getStatus(quote.action.fromChainId, quote.action.toChainId, sendTx.hash)
+  await new Promise((resolve) => {
+    setTimeout(resolve, 10_000)
+  })
+} while (
+  !result ||
+  (result.status !== 'DONE' && result.status !== 'FAILED')
+)
+console.log('>> FINISHED', result)
 ```
 
 ## Summary
