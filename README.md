@@ -1,18 +1,17 @@
 # ParaSwap Connext SDK
 
-## Installation
+```
+Prerelase for local testing! The package will be available on package managers soon.
+```
 
-```bash
-yarn add @lifinance/paraswap-connext-sdk
-```
-or
-```bash
-npm install --save @lifinance/paraswap-connext-sdk
-```
+## Summary
+
+This package allows to do bridge and swap calls via [ParaSwap](https://paraswap.io/) and [Connext](https://connext.network/). The [Li.Fi](https://li.fi/) API is used under the hood to find the best cross-chain quote. The quote can then be executed using any signer/wallet.
+
 
 ## Supported Chains and Tokens
 
-Transfers between all combinations of chains supported by Connext are possible. In addition on chains which are supported by ParaSwap most tokens can be used because we automatically swap them for you.
+Transfers of the defined tokens are possible between all combinations of chains supported by Connext. The combination with ParaSwap enables you to swap+bridge any token from chains supported by ParaSwap and receive any token on these chains aswell (bride+swap).
 
 | Chain     | Chain Id | Chain Key | Tokens when sending chain    | Tokens when receiving chain |
 |-----------|----------|-----------|------------------------------|-----------------------------|
@@ -69,12 +68,6 @@ console.log('>> FINISHED', result)
 ```
 
 Please check the demo script `./demo/demo.js` for a complete example.
-
-
-## Summary
-
-This package allow to access to do bridge and swap calls via ParaSwap and Connext. LiFi API is used under the hood to  find the best cross-chain route. The route can then executed via the SDK.
-Learn more about LiFi on (https://li.finance).
 
 
 ## Extend the SDK
