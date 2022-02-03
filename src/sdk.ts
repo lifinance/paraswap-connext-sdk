@@ -1,196 +1,134 @@
-import Lifi, {
-  Token,
-  RoutesResponse,
-  Route,
-  Step,
-  ChainId,
-  TokenAmount,
-  getRpcUrl,
-} from './types'
-import { Logger } from '@connext/nxtp-utils'
-import {
-  NxtpSdk,
-  NxtpSdkEvents,
-  ReceiverTransactionPreparedPayload,
-} from '@connext/nxtp-sdk'
-import { Signer } from 'ethers'
-
-function setupLifi() {
-  const lifi = Lifi
-  lifi.setConfig({
-    apiUrl: 'https://developkub.li.finance/', // staging
-    defaultRouteOptions: {
-      bridges: {
-        allow: ['nxtp'],
-      },
-      exchanges: {
-        allow: ['paraswap'],
-      },
-    },
-  })
-  return Lifi
-}
+import { Step, StatusResponse, Config, ConfigUpdate } from './types'
+import { requestQuoteWrapper, requestStatusWrapper } from './helpers'
+import { BigNumber, ethers, Signer } from 'ethers'
+import { abi as ERC20ABI } from './erc20abi.json'
 
 class SDK {
-  public lifiSdk: typeof Lifi = setupLifi()
-
-  async getTokens(): Promise<Token[]> {
-    return (await this.lifiSdk.getPossibilities()).tokens
+  private config: Config = {
+    apiUrl: 'https://staging.li.quest',
   }
 
-  async getRates(
-    srcToken: string,
-    srcChainId: number,
-    destToken: string,
-    destChainId: number,
+  /**
+   * Get the current configuration of the SDK
+   * @return {Config} - The config object
+   */
+  getConfig = (): Config => {
+    return this.config
+  }
+
+  /**
+   * Set a new confuration for the SDK
+   * @param {ConfigUpdate} configUpdate - An object containing the configuration fields that should be updated.
+   * @return {Config} The renewed config object
+   */
+  setConfig = (configUpdate: ConfigUpdate): Config => {
+    this.config = Object.assign(this.config, configUpdate)
+    return this.config
+  }
+
+  /**
+   * Request a token transfer/swap quote
+   * @param {string} fromToken - The token that should be transferred. Can be the address or the symbol
+   * @param {string|number} fromChain - The receiving chain. Can be the chain id or chain key
+   * @param {string} toToken - The token that should be transferred to. Can be the address or the symbol
+   * @param {string|number} toChain - The receiving chain. Can be the chain id or chain key
+   * @param {string} amount - The amount that should be sent in the smallest possible uint (e.g wei)
+   * @param {string} userAddress - The sending and receiving wallet address
+   * @return {Step | undefined} The found route or `undefined` if no route was found
+   */
+  async getQuote(
+    fromToken: string,
+    fromChain: string | number,
+    toToken: string,
+    toChain: string | number,
     amount: string,
-    userAddress?: string
-  ): Promise<RoutesResponse> {
-    const routesRequest = {
-      fromChainId: srcChainId,
-      fromAmount: amount,
-      fromTokenAddress: srcToken,
-      fromAddress: userAddress,
-      toChainId: destChainId,
-      toTokenAddress: destToken,
-    }
-    return this.lifiSdk.getRoutes(routesRequest)
-  }
-
-  async buildTx(priceRoute: Route): Promise<Step> {
-    for (const step of priceRoute.steps) {
-      if (!step.execution || step.execution.status !== 'DONE') {
-        return this.lifiSdk.getStepTransaction(step)
-      }
-    }
-
-    throw new Error(
-      'Route has already been executed, requtest a new route first.'
+    userAddress: string
+  ): Promise<Step | undefined> {
+    return requestQuoteWrapper(
+      this.config.apiUrl,
+      fromChain.toString(),
+      toChain.toString(),
+      fromToken,
+      toToken,
+      amount,
+      userAddress
     )
   }
 
-  //// Execution helpers
-  private getNxtpInstance(signer: Signer, step: Step) {
-    const chainConfig = {
-      [ChainId.ETH]: {
-        providers: getRpcUrl(ChainId.ETH),
-      },
-      [step.action.fromChainId]: {
-        providers: getRpcUrl(step.action.fromChainId),
-      },
-      [step.action.toChainId]: {
-        providers: getRpcUrl(step.action.toChainId),
-      },
-    }
-
-    const sdk = new NxtpSdk({
-      signer,
-      chainConfig,
-      logger: new Logger({ name: 'NxtpSdkBase', level: 'error' }),
-    })
-    return sdk
+  /**
+   * Request a token transfer/swap quote
+   * @param {string} fromChain - The receiving chain. Can be the chain id or chain key
+   * @param {string} toChain - The receiving chain. Can be the chain id or chain key
+   * @param {string} txHash - The transaction hash of the submitted quote
+   * @return {Step | undefined} The found route or `undefined` if no route was found
+   */
+  async getStatus(
+    fromChain: string | number,
+    toChain: string | number,
+    txHash: string
+  ): Promise<StatusResponse | undefined> {
+    return requestStatusWrapper(
+      this.config.apiUrl,
+      fromChain.toString(),
+      toChain.toString(),
+      txHash
+    )
   }
 
-  async waitForTransactionPreparedEvent(
+  //// Helpers
+
+  async getAllowance(
     signer: Signer,
-    step: Step,
-    timeout = 300_000
-  ): Promise<ReceiverTransactionPreparedPayload> {
-    const nxtpSdk = this.getNxtpInstance(signer, step)
-
-    const prepared = await nxtpSdk.waitFor(
-      NxtpSdkEvents.ReceiverTransactionPrepared,
-      timeout,
-      (data) => data.txData.transactionId === step.estimate.data.transactionId // filter function
-    )
-
-    nxtpSdk.removeAllListeners()
-    return prepared
+    tokenAddress: string,
+    approvalAddress: string
+  ): Promise<BigNumber> {
+    if (tokenAddress === ethers.constants.AddressZero) {
+      throw new Error('Native gas tokens do not have to be approved.')
+    }
+    const erc20 = new ethers.Contract(tokenAddress, ERC20ABI, signer)
+    return erc20.allowance(await signer.getAddress(), approvalAddress)
   }
 
-  async fulfillTransfer(
+  async approveToken(
     signer: Signer,
-    step: Step,
-    prepared: ReceiverTransactionPreparedPayload
-  ): Promise<{ transactionHash: string }> {
-    const nxtpSdk = this.getNxtpInstance(signer, step)
-
-    const result = await nxtpSdk.fulfillTransfer(prepared)
-
-    nxtpSdk.removeAllListeners()
-    return result
-  }
-
-  // getEncryptionPublicKey(): Promise<string>
-  // -> use nxtp internal methods
-
-  // getDecryptedCallDate(event: TransactionPreparedEvent): Promise<string>
-  // -> use nxtp internal methods
-
-  //// Forward to LiFi SDK (helpers)
-
-  // getAllowances(
-  //   userAddress: Address,
-  //   tokenAddresses: Address[]
-  // ): Promise<Allowance[] | APIError>
-  // -> forward to lifi sdk
-
-  // getAllowance(
-  //   userAddress: Address,
-  //   tokenAddress: Address
-  // ): Promise<Allowance | APIError>
-  // -> forward to lifi sdk
-
-  // approveTokenBulk(
-  //   amount: PriceString,
-  //   userAddress: Address,
-  //   tokenAddresses: Address[],
-  //   _provider?: any
-  // ): Promise<string[]>
-  // -> forward to lifi sdk
-
-  // approveToken(
-  //   amount: PriceString,
-  //   userAddress: Address,
-  //   tokenAddress: Address,
-  //   _provider?: any,
-  //   sendOptions?: Omit<SendOptions, 'from'>
-  // ): Promise<string>
-  // -> forward to lifi sdk
-
-  async getBalance(
-    userAddress: string,
-    addressOrSymbol: string,
-    chainId: number
-  ): Promise<TokenAmount> {
-    const tokens = await this.getTokens()
-    const token = tokens.find(
-      (token) =>
-        token.chainId === chainId &&
-        (token.address === addressOrSymbol.toLowerCase() ||
-          token.symbol.toLowerCase() === addressOrSymbol.toLowerCase())
-    )
-
-    if (!token) {
-      throw new Error('Unknow token')
+    amount: string,
+    tokenAddress: string,
+    approvalAddress: string
+  ): Promise<ethers.providers.TransactionResponse> {
+    if (tokenAddress === ethers.constants.AddressZero) {
+      throw new Error('Native gas tokens do not have to be approved.')
     }
-
-    const balance = await this.lifiSdk.getTokenBalance(userAddress, token)
-    if (!balance) {
-      throw new Error('Unable to find token balance')
-    }
-
-    return balance
+    const erc20 = new ethers.Contract(tokenAddress, ERC20ABI, signer)
+    return erc20.approve(approvalAddress, amount)
   }
 
-  async getBalances(userAddress: string): Promise<TokenAmount[]> {
-    const tokens = await this.getTokens()
-    const balances = await this.lifiSdk.getTokenBalances(userAddress, tokens)
-    return balances
-  }
+  // async getBalance(
+  //   userAddress: string,
+  //   addressOrSymbol: string,
+  //   chainId: number
+  // ): Promise<TokenAmount> {
+  //   const tokens = await this.getTokens()
+  //   const token = tokens.find(
+  //     (token) =>
+  //       token.chainId === chainId &&
+  //       (token.address === addressOrSymbol.toLowerCase() ||
+  //         token.symbol.toLowerCase() === addressOrSymbol.toLowerCase())
+  //   )
+  //   if (!token) {
+  //     throw new Error('Unknow token')
+  //   }
+  //   const balance = await this.lifiSdk.getTokenBalance(userAddress, token)
+  //   if (!balance) {
+  //     throw new Error('Unable to find token balance')
+  //   }
+  //   return balance
+  // }
 
-  // expose other LiFi methods
-  executeRoute = this.lifiSdk.executeRoute
+  // async getBalances(userAddress: string): Promise<TokenAmount[]> {
+  //   const tokens = await this.getTokens()
+  //   const balances = await this.lifiSdk.getTokenBalances(userAddress, tokens)
+  //   return balances
+  // }
 }
 
-export default new SDK()
+export const ParaswapConnextSdk = SDK

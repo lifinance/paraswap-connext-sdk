@@ -1,5 +1,17 @@
-export * from '@lifinance/sdk'
-export * from '@lifinance/sdk/dist/connectors'
+import { Step as LiFiStep } from '@lifinance/types'
+import { providers } from 'ethers'
 
-import Lifi from '@lifinance/sdk'
-export default Lifi
+export * from '@lifinance/types'
+
+export type Config = {
+  apiUrl: string
+}
+
+export type ConfigUpdate = {
+  apiUrl?: string
+}
+
+// the returned Steps always contain a transactionRequest
+export type Step = LiFiStep & {
+  transactionRequest: providers.TransactionRequest
+}
