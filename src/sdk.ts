@@ -131,4 +131,4 @@ class SDK {
   // }
 }
 
-export const ParaswapConnextSdk = SDK
+export const ParaswapConnextSDK = SDK
