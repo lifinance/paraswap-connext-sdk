@@ -52,6 +52,9 @@ do {
 console.log('>> FINISHED', result)
 ```
 
+Please check the demo script `./demo/demo.js` for a complete example.
+
+
 ## Summary
 
 This package allow to access to do bridge and swap calls via ParaSwap and Connext. LiFi API is used under the hood to  find the best cross-chain route. The route can then executed via the SDK.
