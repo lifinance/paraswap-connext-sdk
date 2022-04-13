@@ -5,7 +5,7 @@ import { abi as ERC20ABI } from './erc20abi.json'
 
 class SDK {
   private config: Config = {
-    apiUrl: 'https://staging.li.quest',
+    apiUrl: 'https://li.quest',
   }
 
   /**
@@ -17,7 +17,7 @@ class SDK {
   }
 
   /**
-   * Set a new confuration for the SDK
+   * Set a new configuration for the SDK
    * @param {ConfigUpdate} configUpdate - An object containing the configuration fields that should be updated.
    * @return {Config} The renewed config object
    */
@@ -101,34 +101,6 @@ class SDK {
     const erc20 = new ethers.Contract(tokenAddress, ERC20ABI, signer)
     return erc20.approve(approvalAddress, amount)
   }
-
-  // async getBalance(
-  //   userAddress: string,
-  //   addressOrSymbol: string,
-  //   chainId: number
-  // ): Promise<TokenAmount> {
-  //   const tokens = await this.getTokens()
-  //   const token = tokens.find(
-  //     (token) =>
-  //       token.chainId === chainId &&
-  //       (token.address === addressOrSymbol.toLowerCase() ||
-  //         token.symbol.toLowerCase() === addressOrSymbol.toLowerCase())
-  //   )
-  //   if (!token) {
-  //     throw new Error('Unknow token')
-  //   }
-  //   const balance = await this.lifiSdk.getTokenBalance(userAddress, token)
-  //   if (!balance) {
-  //     throw new Error('Unable to find token balance')
-  //   }
-  //   return balance
-  // }
-
-  // async getBalances(userAddress: string): Promise<TokenAmount[]> {
-  //   const tokens = await this.getTokens()
-  //   const balances = await this.lifiSdk.getTokenBalances(userAddress, tokens)
-  //   return balances
-  // }
 }
 
 export const ParaswapConnextSDK = SDK
